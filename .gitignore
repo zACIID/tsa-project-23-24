@@ -166,7 +166,8 @@ artifacts
 
 # Data
 data/*
-!data/raw/.keep
+!data/smh-2024-07-31.csv
+!data/global-semiconductor-sales-2012-2024.csv
 
 # Spark
 /spark/src.zip
