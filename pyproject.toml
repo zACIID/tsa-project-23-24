@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "dl4nlp-project-fsa"
+version = "0.1.0"
+description = ""
+authors = ["zACIID <marchioropierluigi@gmail.com>"]
+readme = "README.md"
+packages = [
+    { include = "dl4nlp-project-fsa" }
+]
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.13"
+numpy = "^1.26.4"
+pandas = "^2.2.1"
+matplotlib = "^3.8.4"
+loguru = "^0.7.2"
+seaborn = "^0.13.2"
+plotly = "^5.20.0"
+tqdm = "^4.66.2"
+jupyter = "^1.0.0"
+jupytext = "^1.16.1"
+statsmodels = "^0.14.2"
+scikit-learn = "^1.5.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
