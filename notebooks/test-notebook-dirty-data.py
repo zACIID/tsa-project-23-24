@@ -82,7 +82,7 @@ from pandas.plotting import autocorrelation_plot, lag_plot
 # ## SMH Time Series EDA 
 
 # index_col=0 so that timestamp is the index -> handy for plots
-smh = pd.read_csv('../data/smh-2024-07-31.csv', parse_dates=True, index_col=0)
+smh = pd.read_csv('../data/smh-2000-06-05_2024-07-30__dirty.csv', parse_dates=True, index_col=0)
 smh.describe()
 
 smh.head(10)
