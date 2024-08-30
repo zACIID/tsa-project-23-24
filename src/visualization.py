@@ -27,7 +27,7 @@ def plot_time_series_with_rolling_stats(ts: pd.Series, k: int) -> plt.Figure:
 
     # Compute rolling statistics
     rolling_mean = ts.rolling(window=k).mean()
-    rolling_std = ts.rolling(window=k).var()
+    rolling_std = ts.rolling(window=k).std()
 
     # Required else plot breaks
     if isinstance(ts.index, pd.PeriodIndex):
