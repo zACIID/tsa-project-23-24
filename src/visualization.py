@@ -119,10 +119,17 @@ def plot_acf_pacf(ts: pd.Series) -> plt.Figure:
     # I saw a heuristic on some StackExchange discussions that said to plot lags
     #   until time_series.length/100 or until the ACF goes to 0, whichever of the two comes first
     tsa_plt.plot_acf(ts, ax=axs[0], lags=ts.shape[0] // 100, auto_ylims=True)
+    xlim_low, xlim_high = axs[0].get_xlim()
+    axs[0].set_xticks(np.arange(0, xlim_high, 5))
 
     # These two are automatically zoomed-in by the plotting library, based on the behavior of ACF values
     tsa_plt.plot_acf(ts, ax=axs[1], auto_ylims=True)
+    xlim_low, xlim_high = axs[1].get_xlim()
+    axs[1].set_xticks(np.arange(0, xlim_high, 5))
+
     tsa_plt.plot_pacf(ts, ax=axs[2], auto_ylims=True)
+    xlim_low, xlim_high = axs[2].get_xlim()
+    axs[2].set_xticks(np.arange(0, xlim_high, 5))
 
     return fig
 
