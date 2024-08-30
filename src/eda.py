@@ -62,7 +62,7 @@ class TimeSeries(abc.ABC):
         fig = vis.plot_ts_decomposition(ts, period=252, seasonality=251, stl=False)
 
         fig = vis.plot_acf_pacf(ts)
-        fig = vis.plot_top_k_autocorr_lags(ts, k=5)
+        fig = vis.plot_top_k_autocorr_lags(ts, k=10)
 
     def stationarity_tests(self) -> pd.DataFrame:
         return pd.DataFrame(
