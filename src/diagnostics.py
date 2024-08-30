@@ -1,3 +1,5 @@
+import typing
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -5,18 +7,23 @@ import seaborn as sns
 import sklearn.metrics as sk_metrics
 import statsmodels.api as sm
 import statsmodels.tsa.exponential_smoothing.ets as ets
-from statsmodels.tsa.arima.model import ARIMAResults
-from statsmodels.tsa.statespace.mlemodel import PredictionResults
+from statsmodels.tsa.statespace.sarimax import SARIMAXResults
+from statsmodels.tsa.statespace.mlemodel import PredictionResultsWrapper
+
+import src.visualization as vis
 
 
 def plot_predictions_from_fit_results(
-        fit_results: ets.ETSResults | ARIMAResults,
+        fit_results: ets.ETSResults | SARIMAXResults,
         train: pd.Series,
         test: pd.Series,
-        alpha: float = 0.05
+        alpha: float = 0.05,
+        differencing_order: int = 0
 ) -> plt.Figure:
-    pred_res: ets.PredictionResults | PredictionResults = fit_results.get_prediction(
-        start=0,
+    # If 1-diffed, need to start from time 1, can't make predictions for time 0
+    train = train[differencing_order:]
+    pred_res: ets.PredictionResults | PredictionResultsWrapper = fit_results.get_prediction(
+        start=differencing_order,
         end=train.shape[0] + test.shape[0]
     )
 
@@ -25,9 +32,9 @@ def plot_predictions_from_fit_results(
     #   and as forecasts for the rest
     preds = pred_res.predicted_mean
 
-    if isinstance(pred_res, ets.PredictionResults):
+    if isinstance(pred_res, ets.PredictionResultsWrapper):
         conf_int = pred_res.pred_int(alpha=alpha)
-    elif isinstance(pred_res, PredictionResults):
+    elif isinstance(pred_res, PredictionResultsWrapper):
         conf_int = pred_res.conf_int(alpha=alpha)
     else:
         raise NotImplementedError("Unhandled type")
@@ -39,9 +46,9 @@ def plot_predictions_from_fit_results(
         train=train,
         test=test,
         forecast=forecast,
-        forecast_confint=forecast_confint,
+        forecast_confint=(forecast_confint["lower y"], forecast_confint["upper y"]),
         in_sample_preds=in_sample,
-        in_sample_confint=in_sample_confint
+        in_sample_confint=(in_sample_confint["lower y"], in_sample_confint["upper y"])
     )
 
 
@@ -49,9 +56,10 @@ def plot_predictions(
         train: pd.Series,
         test: pd.Series,
         forecast: pd.Series,
-        forecast_confint: pd.Series,
+        forecast_confint: typing.Tuple[pd.Series, pd.Series] = None,
         in_sample_preds: pd.Series = None,
-        in_sample_confint: pd.Series = None
+        in_sample_confint: typing.Tuple[pd.Series, pd.Series] = None,
+        zoom: float = 1.0,
 ) -> plt.Figure:
     """
     Plots the train time series, forecast time series, and optionally in-sample predictions,
@@ -60,64 +68,86 @@ def plot_predictions(
     :param train: the actual training data
     :param test: the actual test data
     :param forecast: the forecasted values starting after the training data.
-    :param forecast_confint: the confidence intervals for the forecast.
-    :param in_sample_preds: optional, the in-sample predictions matching the training data.
+    :param forecast_confint: optional, the (lower, upper) confidence intervals for the forecast.  # TODO optional because cv_predict doesn't return confint
+    :param in_sample_preds: optional, the (lower, upper) in-sample predictions matching the training data.
     :param in_sample_confint: optional, the confidence intervals for the in-sample predictions.
     :return: figure
     """
 
+    if not (0 < zoom <= 1.0):
+        raise ValueError("Zoom must be between 0 and 1.")
+
+    if isinstance(train.index, pd.PeriodIndex):
+        train = train.copy()
+        train.index = train.index.to_timestamp()
+
+    if isinstance(forecast.index, pd.PeriodIndex):
+        forecast = forecast.copy()
+        forecast.index = forecast.index.to_timestamp()
+
     # Create the figure and axis
-    fig, ax = plt.subplots(figsize=(16, 12))
+    fig, ax = plt.subplots(figsize=vis.DEFAULT_FIG_SIZE)
 
     # Plot the train time series
     sns.lineplot(ax=ax, x=train.index, y=train.values, label='Train', color='skyblue')
 
     # Plot the forecast time series and the actual
-    sns.lineplot(ax=ax, x=test.index, y=test.values, label='Forecast', color='orange')
-    sns.lineplot(ax=ax, x=forecast.index, y=forecast.values, label='Forecast', color='orange')
+    sns.lineplot(ax=ax, x=test.index, y=test.values, label='Forecast Actual', color='indianred')
+    sns.lineplot(ax=ax, x=test.index, y=forecast.values, label='Forecast', color='orange')
 
     # Plot the forecast confidence intervals
-    ax.fill_between(forecast.index,
-                    forecast.values - forecast_confint,
-                    forecast.values + forecast_confint,
-                    color='orange', alpha=0.3, label='Forecast Conf. Int.')
+    if forecast_confint is not None:
+        ax.fill_between(test.index,
+                        forecast.values - forecast_confint[0],
+                        forecast.values + forecast_confint[1],
+                        color='orange', alpha=0.3, label='Forecast Conf. Int.')
 
     # Plot the in-sample predictions if provided
     if in_sample_preds is not None:
-        sns.lineplot(ax=ax, x=in_sample_preds.index, y=in_sample_preds.values, label='In-sample Predictions',
+        sns.lineplot(ax=ax, x=train.index, y=in_sample_preds.values, label='In-sample Predictions',
                      color='green')
 
     # Plot the in-sample confidence intervals if provided
     if in_sample_confint is not None:
-        ax.fill_between(in_sample_preds.index,
-                        in_sample_preds.values - in_sample_confint,
-                        in_sample_preds.values + in_sample_confint,
+        ax.fill_between(train.index,
+                        in_sample_preds.values - in_sample_confint[0],
+                        in_sample_preds.values + in_sample_confint[1],
                         color='green', alpha=0.3, label='In-sample Conf. Int.')
 
-    # Customize the x-axis to show one tick per year
-    ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True, prune='lower'))
-    ax.set_xticks(train.index.to_timestamp()[train.index.to_timestamp().month == 1])
+    # Customize the x-axis to show one tick per year, rotated 90degrees
+    ax.set_xticks([pd.Timestamp(f'{year}-01-01') for year in np.concatenate([train.index.year.unique(), test.index.year.unique()])])
+    ax.set_xticklabels([year for year in np.concatenate([train.index.year.unique(), test.index.year.unique()])])
+    ax.tick_params(rotation=90)
 
-    ax.set_xlabel('Year')
+    # Zoom in on the last part of the plot
+    if zoom < 1.0:
+        xlim = ax.get_xlim()
+        zoom_start = xlim[0] + (1 - zoom) * (xlim[1] - xlim[0])
+        ax.set_xlim(left=zoom_start)
+
+        # Adjust y-lim
+        ts = np.concatenate([train, test])
+        zoom_samples = int(ts.shape[0] * zoom)
+        ax.set_ylim(bottom=ts[-zoom_samples:].min()-0.5, top=ts[-zoom_samples:].max()+0.5)
+
+    ax.set_xlabel('Date')
     ax.set_ylabel('Value')
     ax.set_title('Predictions')
-    fig.legend()
 
     return fig
 
 
 def get_diagnostics_df(
-        fit_results: ets.ETSResults | ARIMAResults
+        fit_results: ets.ETSResults | SARIMAXResults
 ) -> pd.DataFrame:
-    # df = pd.DataFrame.from_records([{
-    #     # Is AIC ever better than AICc?
-    #     # https://stats.stackexchange.com/questions/319769/is-aicc-ever-worse-than-aic
-    #     "AICc": fit_results.aicc,
-    #     "BIC": fit_results.bic
-    # }])
-
-    # TODO maybe this is good enough
-    return fit_results.summary()
+    df = pd.DataFrame.from_records([{
+        # Is AIC ever better than AICc?
+        # https://stats.stackexchange.com/questions/319769/is-aicc-ever-worse-than-aic
+        "AICc": fit_results.aicc,
+        "BIC": fit_results.bic,
+        "params_count": len(fit_results.params)
+    }])
+    return df
 
 
 def get_forecast_error_df(test: pd.Series, forecast: pd.Series) -> pd.DataFrame:
