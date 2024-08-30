@@ -5,30 +5,6 @@ import pmdarima.model_selection as pm_modsel
 
 import src.diagnostics as diag
 
-
-# def model_fit(
-#         ets: bool,
-#         model_params: typing.Dict[str, typing.Any]
-# ) -> ets.ETSResults | ARIMAResults:
-#     """
-#     :param ets: TODO could be an enum. If ETS, fit holtwinters, else SARIMAX (else other??)
-#     :param model_params:
-#     :return: fit_results
-#     """
-#
-#     # TODO UPDATE: this method is probably useless since I just need to call model.fit() to get the results, might as well do it on the notebook
-#
-#     # TODO
-#     #  https://stackoverflow.com/questions/70277316/how-to-take-confidence-interval-of-statsmodels-tsa-holtwinters-exponentialsmooth
-#     #  It says:
-#     #  1. use ETSModel because of more modern interface
-#     #  2. gives me a generalized way to calculate prediction intervals
-#     #  Not sure I would use the raw simulate() method though, I would probably go for the get_prediction, which may give me the CI intervals already
-#
-#     # TODO2: the ETS model has the same interface as ARIMA, meaning that I could just create one method for fit
-#     raise NotImplementedError()
-#
-
 def cv_forecast(
         model: typing.Any,
         ts: pd.Series,
@@ -66,34 +42,23 @@ def cv_forecast(
 
     if training_window is not None:
         cv = pm_modsel.SlidingWindowForecastCV(step=step, h=horizon, window_size=training_window)
-        test_size = ts.shape[0] - training_window
+        # test_size = ts.shape[0] - training_window
     else:
+        start_at = int(start_at*ts.shape[0]) if isinstance(start_at, float) else start_at
         cv = pm_modsel.RollingForecastCV(step=step, h=horizon, initial=start_at)
-        test_size = (1 - start_at)*ts.shape[0]
+        # test_size = ts.shape[0] - start_at
 
     # TODO not sure what preds actually is here, may not be a pd.Series and hence throw an error with get_forecast_error_df below
     preds = pm_modsel.cross_val_predict(
         model,
         y=ts,
-        cv=cv
+        cv=cv,
+        verbose=2
     )
-    test_ts = ts[-test_size:]
+
+    # Apparently preds is a np.ndarray with fewer samples than test_size
+    test_ts = ts[-(preds.shape[0]):]
+    preds = pd.Series(preds, index=test_ts.index)
     error_df = diag.get_forecast_error_df(test=test_ts, forecast=preds)
 
     return preds, error_df
-
-
-
-
-
-# TODO stuff to do in the notebook:
-"""
-- SARIMA section
-    - fit SARIMA via auto.arima (to choose the best params) and then by hand
-    - pass each model to the above two methods to produce fit and cv results
-- ETS section
-    - fit ETS based on intuition (everything is additive because I am fitting on log, then I check if I want to model seasonality or not, if I want to dampen... etc.
-    - pass each model to the above two methods to produce fit and cv results
-- compare models based on the errors calculated via the cv_forecast errors and also via the AIC, BIC that can be easily obtained by the fit_results objects
-    - produce a final dataframe so that it is easy to look at the table
-"""
