@@ -18,12 +18,24 @@ def plot_predictions_from_fit_results(
         train: pd.Series,
         test: pd.Series,
         alpha: float = 0.05,
-        differencing_order: int = 0
+        start_at: int = 0,
+        zoom: float = 1.0
 ) -> plt.Figure:
+    """
+    :param fit_results:
+    :param train:
+    :param test:
+    :param alpha:
+    :param start_at: number of samples to start predicting from.
+        Useful when there is seasonality and/or differencing involved,
+        because the first seasonality+differencing periods can't be used for predictions
+    :param zoom: see `plot_predictions` method
+    :return:
+    """
     # If 1-diffed, need to start from time 1, can't make predictions for time 0
-    train = train[differencing_order:]
+    train = train[start_at:]
     pred_res: ets.PredictionResults | PredictionResultsWrapper = fit_results.get_prediction(
-        start=differencing_order,
+        start=start_at,
         end=train.shape[0] + test.shape[0]
     )
 
@@ -48,7 +60,8 @@ def plot_predictions_from_fit_results(
         forecast=forecast,
         forecast_confint=(forecast_confint["lower y"], forecast_confint["upper y"]),
         in_sample_preds=in_sample,
-        in_sample_confint=(in_sample_confint["lower y"], in_sample_confint["upper y"])
+        in_sample_confint=(in_sample_confint["lower y"], in_sample_confint["upper y"]),
+        zoom=zoom
     )
 
 
@@ -114,21 +127,52 @@ def plot_predictions(
                         in_sample_preds.values + in_sample_confint[1],
                         color='green', alpha=0.3, label='In-sample Conf. Int.')
 
-    # Customize the x-axis to show one tick per year, rotated 90degrees
-    ax.set_xticks([pd.Timestamp(f'{year}-01-01') for year in np.concatenate([train.index.year.unique(), test.index.year.unique()])])
-    ax.set_xticklabels([year for year in np.concatenate([train.index.year.unique(), test.index.year.unique()])])
-    ax.tick_params(rotation=90)
+    # Customize the x-axis  -> xlabels can be denser if zoom-in
+    if 0 < zoom < 1.0:
+        ax.set_xticks([
+            pd.Timestamp(f'{year}-{month}-01')
+            for year in np.concatenate([train.index.year.unique(), test.index.year.unique()])
+            for month in np.arange(1, 13)
+        ])
+        ax.set_xticklabels([
+            f"{year}-{month}"
+            for year in np.concatenate([train.index.year.unique(), test.index.year.unique()])
+            for month in np.arange(1, 13)
+        ])
+        ax.tick_params(rotation=90)
+    # elif 0 < zoom < 0.2:
+    #     # Customize the x-axis to show one tick per month, rotated 90degrees -> xlabels can be denser since zoom-in
+    #     ax.set_xticks([
+    #         pd.Timestamp(f'{year}-{month}-{day}')
+    #         for year in np.concatenate([train.index.year.unique(), test.index.year.unique()])
+    #         for month in np.arange(1, 13)
+    #         for day in train.index[(train.index.year == year) & (train.index.month == month)].day.unique()
+    #     ])
+    #     ax.set_xticklabels([
+    #         f"{year}-{month}-{day}"
+    #         for year in np.concatenate([train.index.year.unique(), test.index.year.unique()])
+    #         for month in np.arange(1, 13)
+    #         for day in train.index[(train.index.year == year) & (train.index.month == month)].day.unique()
+    #     ])
+    #     ax.tick_params(rotation=90)
+    else:
+        # Customize the x-axis to show one tick per year, rotated 90degrees
+        ax.set_xticks([pd.Timestamp(f'{year}-01-01') for year in np.concatenate([train.index.year.unique(), test.index.year.unique()])])
+        ax.set_xticklabels([year for year in np.concatenate([train.index.year.unique(), test.index.year.unique()])])
+        ax.tick_params(rotation=90)
 
     # Zoom in on the last part of the plot
+    # Do this AFTER having set the xticks/labels
     if zoom < 1.0:
         xlim = ax.get_xlim()
         zoom_start = xlim[0] + (1 - zoom) * (xlim[1] - xlim[0])
-        ax.set_xlim(left=zoom_start)
+        ax.set_xlim(left=zoom_start, right=test.index.values.max())
 
         # Adjust y-lim
         ts = np.concatenate([train, test])
         zoom_samples = int(ts.shape[0] * zoom)
-        ax.set_ylim(bottom=ts[-zoom_samples:].min()-0.5, top=ts[-zoom_samples:].max()+0.5)
+        ylim_low, ylim_high = ts[-zoom_samples:].min(), ts[-zoom_samples:].max()
+        ax.set_ylim(bottom=ylim_low-(ylim_low*0.05), top=ylim_high+(ylim_high*0.05))
 
     ax.set_xlabel('Date')
     ax.set_ylabel('Value')
