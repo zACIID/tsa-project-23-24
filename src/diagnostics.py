@@ -46,8 +46,12 @@ def plot_predictions_from_fit_results(
 
     if isinstance(pred_res, ets.PredictionResultsWrapper):
         conf_int = pred_res.pred_int(alpha=alpha)
+        conf_int_lower_name = "lower PI (alpha=%.6f)" % alpha
+        conf_int_upper_name = "upper PI (alpha=%.6f)" % alpha
     elif isinstance(pred_res, PredictionResultsWrapper):
         conf_int = pred_res.conf_int(alpha=alpha)
+        conf_int_lower_name = "lower y" % alpha
+        conf_int_upper_name = "upper y" % alpha
     else:
         raise NotImplementedError("Unhandled type")
 
@@ -58,9 +62,9 @@ def plot_predictions_from_fit_results(
         train=train,
         test=test,
         forecast=forecast,
-        forecast_confint=(forecast_confint["lower y"], forecast_confint["upper y"]),
+        forecast_confint=(forecast_confint[conf_int_lower_name], forecast_confint[conf_int_upper_name]),
         in_sample_preds=in_sample,
-        in_sample_confint=(in_sample_confint["lower y"], in_sample_confint["upper y"]),
+        in_sample_confint=(in_sample_confint[conf_int_lower_name], in_sample_confint[conf_int_upper_name]),
         zoom=zoom
     )
 
