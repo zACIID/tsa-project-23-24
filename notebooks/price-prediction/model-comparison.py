@@ -28,6 +28,7 @@ import statsmodels.tsa.stattools as tsa
 import statsmodels.graphics.tsaplots as tsa_plt
 import statsmodels.tsa.arima_model as arima
 import statsmodels.tsa.seasonal as tsa_season
+import statsmodels.tsa.exponential_smoothing.ets as ets
 import sklearn.model_selection as sk_modsel
 import sklearn.metrics as sk_metrics
 from statsmodels.tsa.statespace.sarimax import SARIMAX, SARIMAXResults
@@ -52,6 +53,10 @@ smh.load_data(fraction=0.95, left_side=True)
 # +
 ts: pd.Series = smh.log
 train, val = pm_modsel.train_test_split(ts, train_size=0.9)
+
+# This is so the confint dataframes have two columns: "lower y" and "upper y"
+train.name = "y"
+val.name = "y"
 
 print(f"Number of training samples: {train.shape[0]}")
 print(f"Number of validation samples: {val.shape[0]}")
@@ -219,7 +224,405 @@ model_perf = pd.concat([
 model_perf
 
 
+# ### ARIMA(1, 1, 1)
+#
+# TODO Peaks at lag 1 in both ACF, PACF; according to [this guy, section 8](https://www.machinelearningplus.com/time-series/arima-model-time-series-forecasting-python/), 1 MA term should also fix the slight over-differencing
+
+arima_1_1_1 = pm.ARIMA(order=(1, 1, 1))
+arima_1_1_1_res: SARIMAXResults = arima_1_1_1.fit(y=train).arima_res_
+
+# `#todo` comment on the results here; see https://analyzingalpha.com/interpret-arima-results#Ljung-box
+# - LjungBox seems...
+# - heteroskedasticity...
+
+# sigma2 is the estimate of the variance of the error term
+arima_1_1_1_res.summary()
+
+_ = arima_1_1_1_res.plot_diagnostics(figsize=(16, 16))
+
+import importlib  # TODO debug
+importlib.reload(diag)
+
+_ = diag.plot_predictions_from_fit_results(
+    fit_results=arima_1_1_1_res,
+    train=train,
+    test=val,
+    alpha=0.05,
+    start_at=8+1,  # seasonality+seasonal differencing
+    zoom=1.0
+)
+
+_ = diag.plot_predictions_from_fit_results(
+    fit_results=arima_1_1_1_res,
+    train=train,
+    test=val,
+    alpha=0.05,
+    start_at=8+1,  # seasonality+seasonal differencing
+    zoom=0.125
+)
+
+preds, error_df = mod.cv_forecast(
+    model=arima_1_1_1,  # Need to pass this because it needs get_params method - as last resort I can monkey_patch it to add the method
+    ts=ts,
+    # training_window=252, # TODO testing slidingcv
+    start_at=train.shape[0],
+    step=5,
+    horizon=10
+)
+
+_ = diag.plot_predictions(
+    train=train,
+    test=val[-(preds.shape[0]):],
+    forecast=preds,
+    zoom=1.0
+)
+
+fig = diag.plot_predictions(
+    train=train,
+    test=val[-(preds.shape[0]):],
+    forecast=preds,
+    zoom=0.05
+)
+_ = fig.axes[0].set_xticks(list(np.arange(fig.axes[0].get_xlim()[0], fig.axes[0].get_xlim()[1]+1)))
+
+fit_stats_df = diag.get_diagnostics_df(arima_1_1_1_res)
+
+model_perf = pd.concat([
+    model_perf,
+    pd.concat([
+        pd.DataFrame.from_records([{"model": "ARIMA(1,1,1)"}]),
+        error_df,
+        fit_stats_df
+    ], axis=1)
+], axis=0)
+model_perf
+
+
+
+# ### ARIMA(8, 1, 8)
+#
+# TODO Peaks up to at least lag 8 in both ACF and PACF
+
+arima_8_1_8 = pm.ARIMA(order=(8, 1, 8))
+arima_8_1_8_res: SARIMAXResults = arima_8_1_8.fit(y=train).arima_res_
+
+# `#todo` comment on the results here; see https://analyzingalpha.com/interpret-arima-results#Ljung-box
+# - LjungBox seems...
+# - heteroskedasticity...
+
+# sigma2 is the estimate of the variance of the error term
+arima_8_1_8_res.summary()
+
+_ = arima_8_1_8_res.plot_diagnostics(figsize=(16, 16))
+
+import importlib  # TODO debug
+importlib.reload(diag)
+
+_ = diag.plot_predictions_from_fit_results(
+    fit_results=arima_8_1_8_res,
+    train=train,
+    test=val,
+    alpha=0.05,
+    start_at=8+1,  # seasonality+seasonal differencing
+    zoom=1.0
+)
+
+_ = diag.plot_predictions_from_fit_results(
+    fit_results=arima_8_1_8_res,
+    train=train,
+    test=val,
+    alpha=0.05,
+    start_at=8+1,  # seasonality+seasonal differencing
+    zoom=0.125
+)
+
+preds, error_df = mod.cv_forecast(
+    model=arima_8_1_8,  # Need to pass this because it needs get_params method - as last resort I can monkey_patch it to add the method
+    ts=ts,
+    # training_window=252, # TODO testing slidingcv
+    start_at=train.shape[0],
+    step=5,
+    horizon=10
+)
+
+_ = diag.plot_predictions(
+    train=train,
+    test=val[-(preds.shape[0]):],
+    forecast=preds,
+    zoom=1.0
+)
+
+fig = diag.plot_predictions(
+    train=train,
+    test=val[-(preds.shape[0]):],
+    forecast=preds,
+    zoom=0.05
+)
+_ = fig.axes[0].set_xticks(list(np.arange(fig.axes[0].get_xlim()[0], fig.axes[0].get_xlim()[1]+1)))
+
+fit_stats_df = diag.get_diagnostics_df(arima_8_1_8_res)
+
+model_perf = pd.concat([
+    model_perf,
+    pd.concat([
+        pd.DataFrame.from_records([{"model": "ARIMA(8,1,8)"}]),
+        error_df,
+        fit_stats_df
+    ], axis=1)
+], axis=0)
+model_perf
+
+
+
 # ## ETS Models
+
+
+# ### ETS (A, A, None)
+
+ets_a_a_none_params = {
+    "error": "add",
+    "trend": "add",
+    "seasonal": None
+}
+ets_a_a_none = ets.ETSModel(
+    train,
+    **ets_a_a_none_params
+)
+ets_a_a_none_res: ets.ETSResults = ets_a_a_none.fit()
+
+# `#todo` comment on the results here; see https://analyzingalpha.com/interpret-arima-results#Ljung-box
+# - LjungBox seems...
+# - heteroskedasticity...
+
+# sigma2 is the estimate of the variance of the error term
+ets_a_a_none_res.summary()
+
+_ = diag.residuals_diagnostics(ets_a_a_none_res.fittedvalues, ets_a_a_none_res.resid)
+
+import importlib  # TODO debug
+importlib.reload(diag)
+
+_ = diag.plot_predictions_from_fit_results(
+    fit_results=ets_a_a_none_res,
+    train=train,
+    test=val,
+    alpha=0.05,
+    start_at=8+1,  # seasonality+seasonal differencing
+    zoom=1.0
+)
+
+_ = diag.plot_predictions_from_fit_results(
+    fit_results=ets_a_a_none_res,
+    train=train,
+    test=val,
+    alpha=0.05,
+    start_at=8+1,  # seasonality+seasonal differencing
+    zoom=0.125
+)
+
+preds, error_df = mod.cv_forecast(
+    # Same params as above, just without the endog which does not need to be specified
+    model=mod.ETSModelEstimatorWrapper(ets_a_a_none_params),
+    ts=ts,
+    # training_window=252, # TODO testing slidingcv
+    start_at=train.shape[0],
+    step=5,
+    horizon=10
+)
+
+_ = diag.plot_predictions(
+    train=train,
+    test=val[-(preds.shape[0]):],
+    forecast=preds,
+    zoom=1.0
+)
+
+fig = diag.plot_predictions(
+    train=train,
+    test=val[-(preds.shape[0]):],
+    forecast=preds,
+    zoom=0.05
+)
+_ = fig.axes[0].set_xticks(list(np.arange(fig.axes[0].get_xlim()[0], fig.axes[0].get_xlim()[1]+1)))
+
+fit_stats_df = diag.get_diagnostics_df(ets_a_a_none_res)
+
+model_perf = pd.concat([
+    model_perf,
+    pd.concat([
+        pd.DataFrame.from_records([{"model": "ETS(A, A, None)"}]),
+        error_df,
+        fit_stats_df
+    ], axis=1)
+], axis=0)
+model_perf
+
+
+# ### ETS (A, A_d, None)
+
+ets_a_ad_none_params = {
+    "error": "add",
+    "trend": "add",
+    "damped_trend": True,
+    "seasonal": None
+}
+ets_a_ad_none = ets.ETSModel(
+    train,
+    **ets_a_ad_none_params
+)
+ets_a_ad_none_res: ets.ETSResults = ets_a_ad_none.fit(y=train)
+
+# `#todo` comment on the results here; see https://analyzingalpha.com/interpret-arima-results#Ljung-box
+# - LjungBox seems...
+# - heteroskedasticity...
+
+# sigma2 is the estimate of the variance of the error term
+ets_a_ad_none_res.summary()
+
+_ = diag.residuals_diagnostics(ets_a_ad_none_res.fittedvalues, ets_a_ad_none_res.resid)
+
+import importlib  # TODO debug
+importlib.reload(diag)
+
+_ = diag.plot_predictions_from_fit_results(
+    fit_results=ets_a_ad_none_res,
+    train=train,
+    test=val,
+    alpha=0.05,
+    start_at=8+1,  # seasonality+seasonal differencing
+    zoom=1.0
+)
+
+_ = diag.plot_predictions_from_fit_results(
+    fit_results=ets_a_ad_none_res,
+    train=train,
+    test=val,
+    alpha=0.05,
+    start_at=8+1,  # seasonality+seasonal differencing
+    zoom=0.125
+)
+
+preds, error_df = mod.cv_forecast(
+    # Same params as above, just without the endog which does not need to be specified
+    model=mod.ETSModelEstimatorWrapper(ets_a_ad_none_params),
+    ts=ts,
+    # training_window=252, # TODO testing slidingcv
+    start_at=train.shape[0],
+    step=5,
+    horizon=10
+)
+
+_ = diag.plot_predictions(
+    train=train,
+    test=val[-(preds.shape[0]):],
+    forecast=preds,
+    zoom=1.0
+)
+
+fig = diag.plot_predictions(
+    train=train,
+    test=val[-(preds.shape[0]):],
+    forecast=preds,
+    zoom=0.05
+)
+_ = fig.axes[0].set_xticks(list(np.arange(fig.axes[0].get_xlim()[0], fig.axes[0].get_xlim()[1]+1)))
+
+fit_stats_df = diag.get_diagnostics_df(ets_a_ad_none_res)
+
+model_perf = pd.concat([
+    model_perf,
+    pd.concat([
+        pd.DataFrame.from_records([{"model": "ETS(A, A_d, None)"}]),
+        error_df,
+        fit_stats_df
+    ], axis=1)
+], axis=0)
+model_perf
+
+
+
+# ### ETS (A, A_d, A)
+
+ets_a_ad_a_params = {
+    "error": "add",
+    "trend": "add",
+    "damped_trend": True,
+    "seasonal": "add",
+    "seasonal_periods": 8
+}
+ets_a_ad_a = ets.ETSModel(
+    train,
+    **ets_a_ad_a_params
+)
+ets_a_ad_a_res: ets.ETSResults = ets_a_ad_a.fit(y=train)
+
+# `#todo` comment on the results here; see https://analyzingalpha.com/interpret-arima-results#Ljung-box
+# - LjungBox seems...
+# - heteroskedasticity...
+
+# sigma2 is the estimate of the variance of the error term
+ets_a_ad_a_res.summary()
+
+_ = diag.residuals_diagnostics(ets_a_ad_a_res.fittedvalues, ets_a_ad_a_res.resid)
+
+import importlib  # TODO debug
+importlib.reload(diag)
+
+_ = diag.plot_predictions_from_fit_results(
+    fit_results=ets_a_ad_a_res,
+    train=train,
+    test=val,
+    alpha=0.05,
+    start_at=8+1,  # seasonality+seasonal differencing
+    zoom=1.0
+)
+
+_ = diag.plot_predictions_from_fit_results(
+    fit_results=ets_a_ad_a_res,
+    train=train,
+    test=val,
+    alpha=0.05,
+    start_at=8+1,  # seasonality+seasonal differencing
+    zoom=0.125
+)
+
+preds, error_df = mod.cv_forecast(
+    # Same params as above, just without the endog which does not need to be specified
+    model=mod.ETSModelEstimatorWrapper(ets_a_ad_a_params),
+    ts=ts,
+    # training_window=252, # TODO testing slidingcv
+    start_at=train.shape[0],
+    step=5,
+    horizon=10
+)
+
+_ = diag.plot_predictions(
+    train=train,
+    test=val[-(preds.shape[0]):],
+    forecast=preds,
+    zoom=1.0
+)
+
+fig = diag.plot_predictions(
+    train=train,
+    test=val[-(preds.shape[0]):],
+    forecast=preds,
+    zoom=0.05
+)
+_ = fig.axes[0].set_xticks(list(np.arange(fig.axes[0].get_xlim()[0], fig.axes[0].get_xlim()[1]+1)))
+
+fit_stats_df = diag.get_diagnostics_df(ets_a_ad_a_res)
+
+model_perf = pd.concat([
+    model_perf,
+    pd.concat([
+        pd.DataFrame.from_records([{"model": "ETS(A, A_d, A)"}]),
+        error_df,
+        fit_stats_df
+    ], axis=1)
+], axis=0)
+model_perf
+
 
 
 
