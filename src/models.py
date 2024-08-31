@@ -11,12 +11,12 @@ import src.diagnostics as diag
 # NOTE: I decided to implemented only these methods because they are the only
 #   required by the pm_modsel.cross_val_predict function. I looked at the source code
 class ETSModelEstimatorWrapper(sk_base.BaseEstimator):
-    def __init__(self, ets_model_params: typing.Dict[str, typing.Any]):
-        self._ets: ets.ETSResults | None = None
-        self._ets_params = ets_model_params
+    def __init__(self, ets_params: typing.Dict[str, typing.Any]):
+        self.ets: ets.ETSResults | None = None
+        self.ets_params = ets_params
 
     def fit(self, y, X, **fit_args):
-        self._ets = ets.ETSModel(endog=y, **self._ets_params).fit()
+        self.ets = ets.ETSModel(endog=y, **self.ets_params).fit()
 
     def fit_predict(self, y, X=None, n_periods=10, **fit_args):
         self.fit(y, X, **fit_args)
@@ -24,8 +24,7 @@ class ETSModelEstimatorWrapper(sk_base.BaseEstimator):
         return self.predict(n_periods=n_periods, X=X)
 
     def predict(self, n_periods, X, return_conf_int=False, alpha=0.05, **kwargs):
-        self._ets.predict(start=self._ets.nobs, end=self._ets.nobs + n_periods)
-
+        return self.ets.predict(start=self.ets.nobs+1, end=self.ets.nobs + n_periods)
 
 
 def cv_forecast(
@@ -71,7 +70,6 @@ def cv_forecast(
         cv = pm_modsel.RollingForecastCV(step=step, h=horizon, initial=start_at)
         # test_size = ts.shape[0] - start_at
 
-    # TODO not sure what preds actually is here, may not be a pd.Series and hence throw an error with get_forecast_error_df below
     preds = pm_modsel.cross_val_predict(
         model,
         y=ts,
