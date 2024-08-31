@@ -2,11 +2,34 @@ import typing
 
 import pandas as pd
 import pmdarima.model_selection as pm_modsel
+import statsmodels.tsa.exponential_smoothing.ets as ets
+import sklearn.base as sk_base
 
 import src.diagnostics as diag
 
+
+# NOTE: I decided to implemented only these methods because they are the only
+#   required by the pm_modsel.cross_val_predict function. I looked at the source code
+class ETSModelEstimatorWrapper(sk_base.BaseEstimator):
+    def __init__(self, ets_model_params: typing.Dict[str, typing.Any]):
+        self._ets: ets.ETSResults | None = None
+        self._ets_params = ets_model_params
+
+    def fit(self, y, X, **fit_args):
+        self._ets = ets.ETSModel(endog=y, **self._ets_params).fit()
+
+    def fit_predict(self, y, X=None, n_periods=10, **fit_args):
+        self.fit(y, X, **fit_args)
+
+        return self.predict(n_periods=n_periods, X=X)
+
+    def predict(self, n_periods, X, return_conf_int=False, alpha=0.05, **kwargs):
+        self._ets.predict(start=self._ets.nobs, end=self._ets.nobs + n_periods)
+
+
+
 def cv_forecast(
-        model: typing.Any,
+        model: sk_base.BaseEstimator,
         ts: pd.Series,
         start_at: int | float = 0.75,
         step: int = 5,
@@ -15,7 +38,7 @@ def cv_forecast(
 ) -> typing.Tuple[pd.Series, pd.DataFrame]:
     """
     Perform recursive `horizon`-step-ahead prediction
-    :param model: anything that implements a `fit` method with no required arguments
+    :param model: anything that implements the `fit`, `fit_predict` and `predict` sklearn Estimator interface
     :param ts: time series
     :param start_at: either fraction or number of samples - ignored if `training_window` is provided
     :param step: steps to increase the training set size by.
