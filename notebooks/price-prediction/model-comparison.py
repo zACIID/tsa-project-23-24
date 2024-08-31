@@ -53,6 +53,7 @@ smh.load_data(fraction=0.95, left_side=True)
 # +
 ts: pd.Series = smh.log
 train, val = pm_modsel.train_test_split(ts, train_size=0.9)
+# cval_train = train[-504:] # TODO may want to Take last two years for CV and use sliding window so that plot become more zoomed in and predictions may be more adaptive
 
 # This is so the confint dataframes have two columns: "lower y" and "upper y"
 train.name = "y"
@@ -407,7 +408,7 @@ _ = diag.plot_predictions_from_fit_results(
     train=train,
     test=val,
     alpha=0.05,
-    start_at=8+1,  # seasonality+seasonal differencing
+    start_at=0,
     zoom=1.0
 )
 
@@ -416,9 +417,12 @@ _ = diag.plot_predictions_from_fit_results(
     train=train,
     test=val,
     alpha=0.05,
-    start_at=8+1,  # seasonality+seasonal differencing
+    start_at=0,
     zoom=0.125
 )
+
+import importlib  # TODO debug
+importlib.reload(mod)
 
 preds, error_df = mod.cv_forecast(
     # Same params as above, just without the endog which does not need to be specified
@@ -470,7 +474,7 @@ ets_a_ad_none = ets.ETSModel(
     train,
     **ets_a_ad_none_params
 )
-ets_a_ad_none_res: ets.ETSResults = ets_a_ad_none.fit(y=train)
+ets_a_ad_none_res: ets.ETSResults = ets_a_ad_none.fit(y=)
 
 # `#todo` comment on the results here; see https://analyzingalpha.com/interpret-arima-results#Ljung-box
 # - LjungBox seems...
@@ -489,7 +493,7 @@ _ = diag.plot_predictions_from_fit_results(
     train=train,
     test=val,
     alpha=0.05,
-    start_at=8+1,  # seasonality+seasonal differencing
+    start_at=0,
     zoom=1.0
 )
 
@@ -498,7 +502,7 @@ _ = diag.plot_predictions_from_fit_results(
     train=train,
     test=val,
     alpha=0.05,
-    start_at=8+1,  # seasonality+seasonal differencing
+    start_at=0,
     zoom=0.125
 )
 
@@ -541,20 +545,20 @@ model_perf
 
 
 
-# ### ETS (A, A_d, A)
+# ### ETS (A, A_d, M)
 
 ets_a_ad_a_params = {
     "error": "add",
     "trend": "add",
     "damped_trend": True,
-    "seasonal": "add",
+    "seasonal": "mul",
     "seasonal_periods": 8
 }
 ets_a_ad_a = ets.ETSModel(
     train,
     **ets_a_ad_a_params
 )
-ets_a_ad_a_res: ets.ETSResults = ets_a_ad_a.fit(y=train)
+ets_a_ad_a_res: ets.ETSResults = ets_a_ad_a.fit()
 
 # `#todo` comment on the results here; see https://analyzingalpha.com/interpret-arima-results#Ljung-box
 # - LjungBox seems...
@@ -616,7 +620,7 @@ fit_stats_df = diag.get_diagnostics_df(ets_a_ad_a_res)
 model_perf = pd.concat([
     model_perf,
     pd.concat([
-        pd.DataFrame.from_records([{"model": "ETS(A, A_d, A)"}]),
+        pd.DataFrame.from_records([{"model": "ETS(A, A_d, M)"}]),
         error_df,
         fit_stats_df
     ], axis=1)
@@ -627,5 +631,7 @@ model_perf
 
 
 # ## Model Comparisons
+#
+# TODO here I shall also choose which model is the best, also based on how predictions were made
 
-
+model_perf
