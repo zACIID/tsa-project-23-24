@@ -101,3 +101,4 @@ After all of this, i shall move to transfer function modelling...
 
 - want to log-transform because economic time series are usually multiplicative in nature, and additive models are somewhat easier to handle. Additionally, KPSS stat requires a linear-trend time series because it tries to verify trend-stationarity
 - I am trimming the first part of the smhprice time series because it isn't a full year, so I am actually starting from 2001. My idea is that it is better to have full periods so that there is an equal representation of seasonality in the time series, also because I have a suspect that 
+- boxplots about annual seasonality of SMH may indicate that volatility does vary across months, but no clear seasonal pattern, since the median of every month seems to be the same 
