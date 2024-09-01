@@ -34,6 +34,10 @@ def plot_predictions_from_fit_results(
     """
     # If 1-diffed, need to start from time 1, can't make predictions for time 0
     train = train[start_at:]
+
+    # Difference between forecast and prediction methods:
+    # https://stats.stackexchange.com/a/534159/395870
+    # Basically get_prediction is the most general and complete one
     pred_res: ets.PredictionResults | PredictionResultsWrapper = fit_results.get_prediction(
         start=start_at,
         end=train.shape[0] + test.shape[0]
@@ -204,6 +208,17 @@ def get_forecast_error_df(test: pd.Series, forecast: pd.Series) -> pd.DataFrame:
         "RMSE": sk_metrics.root_mean_squared_error(test, forecast),
         "MAPE": sk_metrics.mean_absolute_percentage_error(test, forecast)
     }])
+
+
+def get_stationarity_df(ts: pd.Series) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            # first two elements of adfuller and kpss are statistic, p-value
+            ["adfuller", *(sm.tsa.adfuller(ts)[:2])],
+            ["kpss", *(sm.tsa.kpss(ts)[:2])],
+        ],
+        columns=["test", "statistic", "p-value"]
+    )
 
 
 def residuals_diagnostics(fitted: np.ndarray, residuals: np.ndarray) -> plt.Figure:
