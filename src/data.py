@@ -56,20 +56,25 @@ class TimeSeries(abc.ABC):
             self._plot_ts_visulizations(self.log_diffed, ts_name=f"Log {self.differencing_periods}-Differenced")
 
     def _plot_ts_visulizations(self, ts: pd.Series, ts_name: str):
-        vis.ts_eda(ts=ts, ts_name=f"{self.name} - {ts_name}", expected_seasonality=self.expected_seasonality)
+        vis.ts_eda(
+            ts=ts,
+            ts_name=f"{self.name} - {ts_name}",
+            expected_seasonality=self.expected_seasonality,
+            ts_plot=False  # Already shown in rolling stats plot
+        )
 
     def stationarity_tests(self) -> pd.DataFrame:
         return pd.DataFrame(
             [
                 # first two elements of adfuller and kpss are statistic, p-value
                 ["original", "adfuller", *(tsa.adfuller(self.original)[:2])],
-                ["diffed", "adfuller", *(tsa.adfuller(self.log)[:2])],
-                ["log", "adfuller", *(tsa.adfuller(self.diffed)[:2])],
+                ["diffed", "adfuller", *(tsa.adfuller(self.diffed)[:2])],
+                ["log", "adfuller", *(tsa.adfuller(self.log)[:2])],
                 ["log_diffed", "adfuller", *(tsa.adfuller(self.log_diffed)[:2])],
 
                 ["original", "kpss", *(tsa.kpss(self.original)[:2])],
-                ["diffed", "kpss", *(tsa.kpss(self.log)[:2])],
-                ["log", "kpss", *(tsa.kpss(self.diffed)[:2])],
+                ["diffed", "kpss", *(tsa.kpss(self.diffed)[:2])],
+                ["log", "kpss", *(tsa.kpss(self.log)[:2])],
                 ["log_diffed", "kpss", *(tsa.kpss(self.log_diffed)[:2])],
             ],
             columns=["ts", "test", "statistic", "p-value"]
