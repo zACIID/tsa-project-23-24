@@ -66,4 +66,6 @@ smh.plot_visualizations(log=True)
 
 smh.plot_visualizations(log_diffed=True)
 
+# ### Stationarity Tests
 
+smh.stationarity_tests()
