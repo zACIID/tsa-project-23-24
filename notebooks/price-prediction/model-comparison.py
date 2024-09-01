@@ -474,7 +474,7 @@ ets_a_ad_none = ets.ETSModel(
     train,
     **ets_a_ad_none_params
 )
-ets_a_ad_none_res: ets.ETSResults = ets_a_ad_none.fit(y=)
+ets_a_ad_none_res: ets.ETSResults = ets_a_ad_none.fit()
 
 # `#todo` comment on the results here; see https://analyzingalpha.com/interpret-arima-results#Ljung-box
 # - LjungBox seems...
