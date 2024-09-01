@@ -112,15 +112,24 @@ def plot_annual_season_boxplots(ts: pd.Series) -> plt.Figure:
     return fig
 
 
-def plot_acf_pacf(ts: pd.Series) -> plt.Figure:
+def plot_acf_pacf(ts: pd.Series, expected_seasonality: int) -> plt.Figure:
+    """
+    :param ts:
+    :param expected_seasonality: this determines the number of lags shown in the first ACF plot,
+        which is a zoomed-out version to help detect seasonality or other long-term patterns
+    :return:
+    """
     fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(16, 24))
 
-    # This first plot should be a little bit more zoomed out
-    # I saw a heuristic on some StackExchange discussions that said to plot lags
-    #   until time_series.length/100 or until the ACF goes to 0, whichever of the two comes first
-    tsa_plt.plot_acf(ts, ax=axs[0], lags=ts.shape[0] // 100, auto_ylims=True)
+    zoomed_out_lags = expected_seasonality*3 if ts.shape[0] > expected_seasonality else min(ts.shape[0], expected_seasonality*2)
+    tsa_plt.plot_acf(
+        ts,
+        ax=axs[0],
+        lags=zoomed_out_lags,
+        auto_ylims=True
+    )
     xlim_low, xlim_high = axs[0].get_xlim()
-    axs[0].set_xticks(np.arange(0, xlim_high, 5))
+    axs[0].set_xticks(np.arange(0, xlim_high, expected_seasonality//2))
 
     # These two are automatically zoomed-in by the plotting library, based on the behavior of ACF values
     tsa_plt.plot_acf(ts, ax=axs[1], auto_ylims=True)
