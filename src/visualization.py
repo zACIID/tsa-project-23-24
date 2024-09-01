@@ -159,3 +159,86 @@ def plot_top_k_autocorr_lags(ts: pd.Series, k: int = 10) -> plt.Figure:
         pd_plt.lag_plot(ts, ax=axs[i // ncols, i % ncols], lag=lag)
 
     return fig
+
+
+def ts_eda(
+        ts: pd.Series,
+        ts_name: str,
+        expected_seasonality: int,
+        ts_plot: bool = True,
+        rolling_stats_plot: bool = True,
+        season_boxplots: bool = True,
+        ts_decomposition: bool = True,
+        acf_pacf_plots: bool = True,
+        top_k_autocorr_plots: bool = True,
+):
+    """
+    Collection of plots for the provided time series. Can enable/disable any of them by providing the appropriate boolean
+    :param ts:
+    :param ts_name:
+    :param expected_seasonality:
+    :param ts_plot:
+    :param rolling_stats_plot:
+    :param season_boxplots:
+    :param ts_decomposition:
+    :param acf_pacf_plots:
+    :param top_k_autocorr_plots:
+    :return:
+    """
+
+    # NOTE: fig.show()  # figure is non-interactive and thus cannot be shown
+    # assigning plots to fig because otherwise plot may be shown two times
+
+    if ts_plot:
+        _ = plot_ts(ts, title=ts_name)
+
+    if rolling_stats_plot:
+        # Absolutely arbitrary rule to decide rolling window period§
+        _ = plot_time_series_with_rolling_stats(ts, k=max(10, min(int(ts.shape[0]*0.01), 50)))
+
+    if season_boxplots:
+        _ = plot_annual_season_boxplots(ts)
+
+    if ts_decomposition:
+        _ = plot_ts_decomposition(
+            ts,
+            period=expected_seasonality,
+            # seasonality must be odd because of STL (loess smoothing must be centered)
+            seasonality=expected_seasonality if expected_seasonality % 2 == 1 else expected_seasonality+1,
+            stl=True
+        )
+        _ = plot_ts_decomposition(
+            ts,
+            period=expected_seasonality,
+            seasonality=expected_seasonality,
+            stl=False
+        )
+
+    if acf_pacf_plots:
+        _ = plot_acf_pacf(ts, expected_seasonality=expected_seasonality)
+
+    if top_k_autocorr_plots:
+        _ = plot_top_k_autocorr_lags(ts, k=10)
+
+
+def plot_accf_grid(
+        x: pd.Series,
+        y: pd.Series,
+        expected_seasonality: int = 12,
+        x_name="x",
+        y_name="y"
+) -> plt.Figure:
+    fig: plt.Figure = tsa_plt.plot_accf_grid(
+        np.array([x, y]).T,
+        negative_lags=True,
+        lags=np.arange(-expected_seasonality*2, expected_seasonality*2 + 1, 1),
+        adjusted=False
+    )
+    fig.set_size_inches(16, 12)
+    axs = fig.axes
+    axs[0].set_title(f"ACF - {x_name}")  # top-left
+    axs[1].set_title(f"CCF - {x_name}_{{t+k}} & {y_name}_{{t}}")  # top-right
+    axs[2].set_title(f"CCF - {y_name}_{{t+k}} & {x_name}_{{t}}")  # bot-left
+    axs[3].set_title(f"ACF - {y_name}")  # bot-right
+
+    return fig

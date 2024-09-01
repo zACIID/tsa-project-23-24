@@ -7,12 +7,20 @@ import statsmodels.tsa.stattools as tsa
 
 import src.visualization as vis
 
+# TODO should rename this module to data
+
 DATA_DIR = pathlib.Path(__file__).parent.resolve() / ".." / "data"
 
 
 class TimeSeries(abc.ABC):
-    def __init__(self, name: str, differencing_periods: int = 1):
+    def __init__(self, name: str, expected_seasonality: int, differencing_periods: int = 1):
+        """
+        :param name:
+        :param expected_seasonality:
+        :param differencing_periods:
+        """
         self.name = name
+        self.expected_seasonality = expected_seasonality
         self.differencing_periods = differencing_periods
         self.original: pd.Series | None = None
         self.diffed: pd.Series | None = None
@@ -49,20 +57,7 @@ class TimeSeries(abc.ABC):
             self._plot_ts_visulizations(self.log_diffed, ts_name=f"Log {self.differencing_periods}-Differenced")
 
     def _plot_ts_visulizations(self, ts: pd.Series, ts_name: str):
-        # NOTE: fig.show()  # figure is non-interactive and thus cannot be shown
-        # assigning plots to fig because otherwise plot may be shown two times
-
-        fig = vis.plot_ts(ts, title=f"{self.name} - {ts_name}")
-        fig = vis.plot_time_series_with_rolling_stats(ts, k=50)
-        fig = vis.plot_annual_season_boxplots(ts)
-
-        # seasonality must be odd because of STL (loess smoothing must be centered)
-        # TODO parameterize this: expected_period, expected_seasonality as constructor args?
-        fig = vis.plot_ts_decomposition(ts, period=252, seasonality=251, stl=True)
-        fig = vis.plot_ts_decomposition(ts, period=252, seasonality=251, stl=False)
-
-        fig = vis.plot_acf_pacf(ts)
-        fig = vis.plot_top_k_autocorr_lags(ts, k=10)
+        vis.ts_eda(ts=ts, ts_name=f"{self.name} - {ts_name}", expected_seasonality=self.expected_seasonality)
 
     def stationarity_tests(self) -> pd.DataFrame:
         return pd.DataFrame(
@@ -84,16 +79,18 @@ class TimeSeries(abc.ABC):
 
 class SMH(TimeSeries):
     def __init__(self, differencing_periods: int = 1):
-        super().__init__(name="SMH", differencing_periods=differencing_periods)
+        # expected_seasonality=252 because number of trading days in normal year
+        super().__init__(name="SMH", expected_seasonality=252, differencing_periods=differencing_periods)
 
     def load_data(self, fraction: float = 0.8, left_side: bool = True):
         smh = pd.read_csv(DATA_DIR / 'smh-2000-06-05_2024-08-23.csv', parse_dates=True, index_col=0)
 
         # basically a train-test split
-        n_samples = int(smh.shape[0] * fraction)
-        smh = smh[:n_samples] if left_side else smh[(smh.shape[0] - n_samples):]
+        smh = _fraction_ts(smh, fraction, left_side)
 
-        smh.index = smh.index.to_period('D')
+        # Apparently it is better to use DatetimeIndex with irregularly sampled ts,
+        #   which is my case since trading week is 5 days out of 7
+        # smh.index = smh.index.to_period('D')
 
         self.original = smh["Close"]
         self._clean_original_ts()
@@ -124,14 +121,13 @@ class SMH(TimeSeries):
 
 class SemiconductorSales(TimeSeries):
     def __init__(self, differencing_periods: int = 1):
-        super().__init__(name="SemiconductorSales", differencing_periods=differencing_periods)
+        super().__init__(name="SemiconductorSales", expected_seasonality=12, differencing_periods=differencing_periods)
 
     def load_data(self, fraction: float = 0.8, left_side: bool = True):
-        sales = pd.read_csv(DATA_DIR / 'global-semiconductor-sales-2012-2024.csv', parse_dates=True, index_col=0)
+        sales = pd.read_csv(DATA_DIR / 'global-semiconductor-sales-2012-2024.csv', parse_dates=True, index_col=0).dropna()
 
         # basically a train-test split
-        n_samples = int(sales.shape[0] * fraction)
-        sales = sales[:n_samples] if left_side else sales[(sales.shape[0] - n_samples):]
+        sales = _fraction_ts(sales, fraction, left_side)
 
         sales.index = sales.index.to_period('M')
 
@@ -139,4 +135,52 @@ class SemiconductorSales(TimeSeries):
         self.diffed = self.original.diff(periods=self.differencing_periods).dropna()
         self.log = self.original.apply(np.log)
         self.log_diffed = self.log.diff(periods=self.differencing_periods).dropna()
+
+
+class SMHForSemiconductorSales(SMH):
+    def __init__(self, differencing_periods: int = 1):
+        super().__init__(differencing_periods=differencing_periods)
+        self.name = "SMHForSemiconductorSales"
+        self.expected_seasonality = 12  # resampled with monthly freq
+
+    def load_data(self, fraction: float = 0.8, left_side: bool = True):
+        # `fraction` will be applied after resampling so that the length of the
+        #   resampled smh time series and the sales time series match
+        super().load_data(fraction=1.0, left_side=left_side)
+
+        # Resample each SMH time series and take only data points in the
+        #   date range [2012-01-01, 2024-01-01], which is the date range of the sales TS
+        # Also, the first `self.differencing_periods` are skipped in diffed series because differencing is applied
+        #   on SMH before resampling, meaning that the size of the resampled ts
+        #   would be `self.differencing_periods` longer otherwise
+        sales_ts_start_date, sales_ts_end_date = '2012-01-01', '2024-01-02'
+        self.original = self.original[sales_ts_start_date:sales_ts_end_date].resample("MS").first()
+        self.original = _fraction_ts(self.original, fraction, left_side)
+        self.original.index = self.original.index.to_period("M")
+
+        self.diffed = self.diffed[sales_ts_start_date:sales_ts_end_date].resample("MS").first()[self.differencing_periods:]
+        self.diffed = _fraction_ts(self.diffed, fraction, left_side)
+        self.diffed.index = self.diffed.index.to_period("M")
+
+        self.log = self.log[sales_ts_start_date:sales_ts_end_date].resample("MS").first()
+        self.log = _fraction_ts(self.log, fraction, left_side)
+        self.log.index = self.log.index.to_period("M")
+
+        self.log_diffed = self.log_diffed[sales_ts_start_date:sales_ts_end_date].resample("MS").first()[self.differencing_periods:]
+        self.log_diffed = _fraction_ts(self.log_diffed, fraction, left_side)
+        self.log_diffed.index = self.log_diffed.index.to_period("M")
+
+
+
+def _fraction_ts(ts: pd.Series | pd.DataFrame, fraction: float = 0.8, left_side: bool = True):
+    if fraction == 1.0:
+        return ts
+
+    # basically a train-test split
+    n_samples = int(ts.shape[0] * fraction)
+    fractioned = ts[:n_samples] if left_side else ts[(ts.shape[0] - n_samples):]
+    return fractioned
+
+
+
 
