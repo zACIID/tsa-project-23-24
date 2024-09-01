@@ -1,3 +1,5 @@
+import typing
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -16,30 +18,32 @@ def plot_ts(ts: pd.Series, title: str = "Time series") -> plt.Figure:
     return ax.figure
 
 
-def plot_time_series_with_rolling_stats(ts: pd.Series, k: int) -> plt.Figure:
+def plot_time_series_with_rolling_stats(ts: pd.Series, k: int, ts_name: str = "") -> plt.Figure:
     """
     Plots the original time series along with its rolling mean and rolling std.
 
     :param ts: The time series data with a PeriodIndex.
     :param k: The window size for computing the rolling statistics.
+    :param ts_name: label for the time series
     :return: figure
     """
-
-    # Compute rolling statistics
-    rolling_mean = ts.rolling(window=k).mean()
-    rolling_std = ts.rolling(window=k).std()
 
     # Required else plot breaks
     if isinstance(ts.index, pd.PeriodIndex):
         ts = ts.copy()
         ts.index = ts.index.to_timestamp()
 
+    # Compute rolling statistics
+    rolling_mean = ts.rolling(window=k).mean().dropna()
+    rolling_std = ts.rolling(window=k).std().dropna()
+
     # Create the plot
     fig, ax = plt.subplots(figsize=DEFAULT_FIG_SIZE)
-    ax.set_title('Time Series with Rolling Mean and Std')
+    name = ts_name if len(ts_name) > 0 else 'Time Series'
+    ax.set_title(f"{name} with Rolling Mean and Std")
     ax.set_xlabel('Time')
     ax.set_ylabel('Value')
-    sns.lineplot(ax=ax, data=ts, label='Time Series')
+    sns.lineplot(ax=ax, data=ts, label=ts_name)
     sns.lineplot(ax=ax, data=rolling_mean, label=f'Rolling Mean (window={k})')
     sns.lineplot(ax=ax, data=rolling_std, label=f'Rolling Std (window={k})')
 
@@ -121,7 +125,9 @@ def plot_acf_pacf(ts: pd.Series, expected_seasonality: int) -> plt.Figure:
     """
     fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(16, 24))
 
-    zoomed_out_lags = expected_seasonality*3 if ts.shape[0] > expected_seasonality else min(ts.shape[0], expected_seasonality*2)
+    expected_seasonality = 10 if expected_seasonality == 1 else expected_seasonality
+
+    zoomed_out_lags = expected_seasonality*3 if ts.shape[0] > expected_seasonality*3 else min(ts.shape[0], expected_seasonality*2)
     tsa_plt.plot_acf(
         ts,
         ax=axs[0],
@@ -192,7 +198,6 @@ def ts_eda(
     :param ts_decomposition:
     :param acf_pacf_plots:
     :param top_k_autocorr_plots:
-    :return:
     """
 
     # NOTE: fig.show()  # figure is non-interactive and thus cannot be shown
@@ -203,7 +208,7 @@ def ts_eda(
 
     if rolling_stats_plot:
         # Absolutely arbitrary rule to decide rolling window period§
-        _ = plot_time_series_with_rolling_stats(ts, k=max(10, min(int(ts.shape[0]*0.01), 50)))
+        _ = plot_time_series_with_rolling_stats(ts=ts, k=max(10, min(int(ts.shape[0]*0.01), 50)), ts_name=ts_name)
 
     if season_boxplots:
         _ = plot_annual_season_boxplots(ts)
