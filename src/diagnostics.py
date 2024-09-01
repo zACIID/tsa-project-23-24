@@ -50,8 +50,8 @@ def plot_predictions_from_fit_results(
         conf_int_upper_name = "upper PI (alpha=%.6f)" % alpha
     elif isinstance(pred_res, PredictionResultsWrapper):
         conf_int = pred_res.conf_int(alpha=alpha)
-        conf_int_lower_name = "lower y" % alpha
-        conf_int_upper_name = "upper y" % alpha
+        conf_int_lower_name = "lower y"
+        conf_int_upper_name = "upper y"
     else:
         raise NotImplementedError("Unhandled type")
 
