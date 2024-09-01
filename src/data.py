@@ -7,7 +7,6 @@ import statsmodels.tsa.stattools as tsa
 
 import src.visualization as vis
 
-# TODO should rename this module to data
 
 DATA_DIR = pathlib.Path(__file__).parent.resolve() / ".." / "data"
 

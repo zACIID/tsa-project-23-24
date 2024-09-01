@@ -36,7 +36,7 @@ from statsmodels.tsa.forecasting.stl import STLForecast, STLForecastResults
 from pandas.plotting import autocorrelation_plot, lag_plot
 
 import src.visualization as vis
-import src.eda as eda
+import src.data as data
 import src.diagnostics as diag
 import src.models as mod
 # -
@@ -47,7 +47,7 @@ import src.models as mod
 # 1. The remaining 5% is the holdout set, to try with the final model, after the selection process
 # 2. The log time series has been chosen because differencing/integration will be incorporated by the models
 
-smh = eda.SMH(differencing_periods=1)
+smh = data.SMH(differencing_periods=1)
 smh.load_data(fraction=0.95, left_side=True)
 
 # +
