@@ -255,4 +255,93 @@ def plot_accf_grid(
     axs[2].set_title(f"CCF - {y_name}_{{t+k}} & {x_name}_{{t}}")  # bot-left
     axs[3].set_title(f"ACF - {y_name}")  # bot-right
 
+    fig.tight_layout()
+    return fig
+
+
+def plot_top_k_ccf_lags(x: pd.Series, y: pd.Series, k: int = 10, max_lag: int = 100) -> plt.Figure:
+    """
+    Plot the top-k cross-correlation lags between two time series x and y.
+
+    Parameters:
+    :param x: Predictor time series (to be lagged).
+    :param y: Target time series.
+    :param k: Number of top lags to consider.
+    :param max_lag: Maximum lag to consider in CCF.
+    :return: figure
+    """
+    # Compute the cross-correlation function (CCF) up to max_lag
+    # y comes before x because we want negative lags, so we actually lag y with positive lags
+    #   (tsa.ccf functions applies lags to the x var)
+    ccf_res = tsa.ccf(x=y, y=x, adjusted=False)[:max_lag+1]
+
+    # Extract the top k lags based on absolute cross-correlation values
+    top_lags = np.argsort(-np.abs(ccf_res))[:k]
+    top_ccf = pd.DataFrame({
+        "lag": top_lags,
+        "cross_corr": ccf_res[top_lags]
+    })
+
+    # Plot configuration
+    nrows, ncols = len(top_lags) // 2 + 1, 2
+    fig, axs = plt.subplots(nrows, ncols, figsize=(ncols*10, nrows*5))
+    fig.suptitle(f"Top {k} Cross-Correlation Lags between x and y")
+
+    # Barplot of the top cross-correlations
+    sns.barplot(ax=axs[0, 0], data=top_ccf, x="lag", y="cross_corr", color="skyblue")
+    axs[0, 0].set_title("Top Cross-Correlations")
+
+    # Generate cross-lag plots for the top lags
+    for i, lag in enumerate(top_lags):
+        i += 1  # because the first axes is occupied by the top-ccf barplot
+        lagged_x = x.shift(-lag)  # lag X accordingly
+        combined_df = pd.concat([lagged_x, y], axis=1).dropna()
+        axs[i // ncols, i % ncols].scatter(combined_df.iloc[:, 0], combined_df.iloc[:, 1], alpha=0.7)
+
+        # Lags are always < 0 due to how we calculated ccf
+        axs[i // ncols, i % ncols].set_xlabel(f"x(t-{lag})")
+        axs[i // ncols, i % ncols].set_ylabel("y(t)")
+        axs[i // ncols, i % ncols].set_title(f"Lag {-lag}: CCF = {ccf_res[lag]:.2f}")
+
+    fig.tight_layout()
+    return fig
+
+
+def cross_lag_plots(x: pd.Series, y: pd.Series, lags: np.ndarray):
+    """
+    Generate bivariate (cross-lag) plots of x_{t+h} against y_t for each lag in lags.
+
+    Parameters:
+    :param x: Predictor time series (to be lagged).
+    :param y: Target time series.
+    :param lags: List of lags to plot (positive or negative).
+    """
+    nrows, ncols = lags.shape[0] // 2 + 1, 2
+    fig, axs = plt.subplots(nrows, ncols, figsize=(ncols*10, nrows*5))
+
+    if lags.shape[0] == 1:
+        axs = [axs]
+
+    for i, h in enumerate(lags):
+        if h > 0:
+            x_shifted = x.shift(-h)  # x_{t+h} means we need to shift X back by h
+            label = f"x(t+{h})"
+        elif h < 0:
+            x_shifted = x.shift(-h)  # x_{t+h} with h negative means we need to shift x forward by |h|
+            label = f"x(t{h})"
+        else:
+            x_shifted = x
+            label = "x(t)"
+
+        # Drop missing values due to the shift
+        combined_df = pd.concat([x_shifted, y], axis=1).dropna()
+
+        # Plot x_{t+h} against y_{t}
+        ax = axs[i // ncols, i % ncols]
+        ax.scatter(combined_df.iloc[:, 0], combined_df.iloc[:, 1], alpha=0.8)
+        ax.set_xlabel(label)
+        ax.set_ylabel("y(t)")
+        ax.set_title(f'Cross Lag Plot: {label} vs y(t)')
+
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return fig
