@@ -102,38 +102,38 @@ def plot_predictions(
         train = train.copy()
         train.index = train.index.to_timestamp()
 
-    if isinstance(forecast.index, pd.PeriodIndex):
-        forecast = forecast.copy()
-        forecast.index = forecast.index.to_timestamp()
+    if isinstance(test.index, pd.PeriodIndex):
+        test = test.copy()
+        test.index = test.index.to_timestamp()
 
     # Create the figure and axis
     fig, ax = plt.subplots(figsize=vis.DEFAULT_FIG_SIZE)
 
     # Plot the train time series
-    sns.lineplot(ax=ax, x=train.index, y=train.values, label='Train', color='skyblue')
+    sns.lineplot(ax=ax, x=train.index, y=train.values, label='Train', color='green')
 
     # Plot the forecast time series and the actual
     sns.lineplot(ax=ax, x=test.index, y=test.values, label='Forecast Actual', color='indianred')
-    sns.lineplot(ax=ax, x=test.index, y=forecast.values, label='Forecast', color='orange')
+    sns.lineplot(ax=ax, x=test.index, y=forecast.values, label='Forecast', color='orange', linestyle = "dashed")
 
     # Plot the forecast confidence intervals
     if forecast_confint is not None:
         ax.fill_between(test.index,
-                        forecast.values - forecast_confint[0],
-                        forecast.values + forecast_confint[1],
-                        color='orange', alpha=0.3, label='Forecast Conf. Int.')
+                        forecast_confint[0],
+                        forecast_confint[1],
+                        color='orange', alpha=0.2, label='Forecast Conf. Int.')
 
     # Plot the in-sample predictions if provided
     if in_sample_preds is not None:
         sns.lineplot(ax=ax, x=train.index, y=in_sample_preds.values, label='In-sample Predictions',
-                     color='green')
+                     color='mediumseagreen', linestyle = "dashed")
 
     # Plot the in-sample confidence intervals if provided
     if in_sample_confint is not None:
         ax.fill_between(train.index,
-                        in_sample_preds.values - in_sample_confint[0],
-                        in_sample_preds.values + in_sample_confint[1],
-                        color='green', alpha=0.3, label='In-sample Conf. Int.')
+                        in_sample_confint[0],
+                        in_sample_confint[1],
+                        color='mediumseagreen', alpha=0.2, label='In-sample Conf. Int.')
 
     # Customize the x-axis  -> xlabels can be denser if zoom-in
     if 0 < zoom < 1.0:
