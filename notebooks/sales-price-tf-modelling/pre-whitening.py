@@ -78,6 +78,8 @@ pw.prewhiten(x_differencing_order=1)
 
 pw.plot_visualizations()
 
+pw.model_x.summary()
+
 # ### Diffed
 
 pw = tf_mod.PreWhitening(
@@ -86,6 +88,8 @@ pw = tf_mod.PreWhitening(
 pw.prewhiten(x_differencing_order=0)
 
 pw.plot_visualizations()
+
+pw.model_x.summary()
 
 # ### Log
 
@@ -96,6 +100,8 @@ pw.prewhiten(x_differencing_order=1)
 
 pw.plot_visualizations()
 
+pw.model_x.summary()
+
 # ### Log-diffed
 
 pw = tf_mod.PreWhitening(
@@ -105,14 +111,4 @@ pw.prewhiten(x_differencing_order=0)
 
 pw.plot_visualizations()
 
-# ### Sales Diffed, SMH Log-Diffed
-
-pw = tf_mod.PreWhitening(
-    x=sales.diffed, y=smh.log_diffed, x_name="Sales", y_name="SMH Price"
-)
-pw.prewhiten(x_differencing_order=0)
-
-pw.plot_visualizations()
-
-
-
+pw.model_x.summary()
