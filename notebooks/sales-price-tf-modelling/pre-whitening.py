@@ -39,16 +39,12 @@ import src.transfer_function_modelling as tf_mod
 # -
 
 # ## SMH and SemiconductorSales Summary
-#
-# Performing EDA only on the train split, i.e. the first 95% of the TS.
-# Let the holdout set be a very small percentage of the total data, we care to use as much of the TS as possible for train and validation,
-# like in the SIL project. Besides, my forecast horizon is very short, meaning that I do not need to reserve many data points.
 
 smh = data.SMHForSemiconductorSales(differencing_periods=1)
-smh.load_data(fraction=0.95, left_side=True)
+smh.load_data(fraction=0.85, left_side=True)
 
 sales = data.SemiconductorSales(differencing_periods=1)
-sales.load_data(fraction=0.95, left_side=True)
+sales.load_data(fraction=0.85, left_side=True)
 
 # ### ACCF Grid Plots
 

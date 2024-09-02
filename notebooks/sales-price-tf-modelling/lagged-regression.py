@@ -55,6 +55,22 @@ smh_full.load_data(fraction=1.0, left_side=True)
 sales_full = data.SemiconductorSales(differencing_periods=1)
 sales_full.load_data(fraction=1.0, left_side=True)
 
+# ## Desesonalizing
+
+decompose_result = tsa_season.seasonal_decompose(
+    sales.log_diffed,
+    period=12,
+    two_sided=False,
+)
+sales.log_diffed = (sales.log_diffed - decompose_result.seasonal).dropna()
+
+decompose_result = tsa_season.seasonal_decompose(
+    sales_full.log_diffed,
+    period=12,
+    two_sided=False,
+)
+sales_full.log_diffed = (sales_full.log_diffed - decompose_result.seasonal).dropna()
+
 # ### ACCF Grid Plots
 
 _ = vis.plot_accf_grid(x=sales.original, y=smh.original, x_name="Sales", y_name="SMH Price")
@@ -92,7 +108,7 @@ log_diffed_pw.model_x.summary()
 model_res, preds = tf_mod.sequential_tf_model_predictions(
     prewhitened_ts=log_diffed_pw,
     exog_series=sales_full.log_diffed,
-    lags=5,
+    lags=13,
     endog_series_for_plot=smh_full.log_diffed,
     plot_predictions=True
 )
@@ -108,12 +124,12 @@ preds.summary_frame()
 
 # ### Pattern 1
 #
-# [pattern 1](https://online.stat.psu.edu/stat510/lesson/9/9.1#paragraph--309): $d$ here is 12 because the first outside the significance bands, no lags for $y$
+# [pattern 1](https://online.stat.psu.edu/stat510/lesson/9/9.1#paragraph--309): $d$ here is 5 because it is the first lag that is close to the significance bands, no lags for $y$. Additional lags of x that are close to the bands are 10 and 8.
 
 import importlib
 importlib.reload(tf_mod)
 
-x_lags = [12, 13]
+x_lags = [5, 8, 10]
 y_lags = 0
 
 lagged_model_res, lagged_model_preds = tf_mod.lagged_regression_model_predictions(
@@ -134,7 +150,7 @@ lagged_model_preds.summary_frame()
 
 # ### Pattern 4
 #
-# [pattern 4](https://online.stat.psu.edu/stat510/lesson/9/9.1#paragraph--309): $d$ here is 12 because the first outside the significance bands, lag 1 and 2 for $y$
+# [pattern 4](https://online.stat.psu.edu/stat510/lesson/9/9.1#paragraph--309): $d$ here is 5 because the first that is close to the significance bands, lag 1 and 2 for $y$
 
 import importlib
 importlib.reload(tf_mod)
@@ -160,7 +176,7 @@ lagged_model_preds.summary_frame()
 
 # ### Pattern 5
 #
-# [pattern 5](https://online.stat.psu.edu/stat510/lesson/9/9.1#paragraph--309): lags 12 and 13 for $x$ because the first outside the significance bands, lag 1 and 2 for $y$
+# [pattern 5](https://online.stat.psu.edu/stat510/lesson/9/9.1#paragraph--309): lags 5, 8, 10 for $x$ because they are the first that come close to the significance bands, lag 1 and 2 for $y$
 
 import importlib
 importlib.reload(tf_mod)

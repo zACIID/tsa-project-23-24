@@ -177,6 +177,8 @@ def sequential_tf_model_predictions(
     # TODO DEBUG
     print(f"Cross covariance up to lag {lags}:")
     print(ccov[:lags])
+    print(f"Cross correlation up to lag {lags}:")
+    print(tsa.ccf(y=prewhitened_ts.x_whitened, x=prewhitened_ts.y_whitened)[:lags])
 
     # Last param is sigma2
     sigma2 = prewhitened_ts.model_x.arparams[-1]

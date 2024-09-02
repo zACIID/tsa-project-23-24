@@ -40,9 +40,6 @@ import src.transfer_function_modelling as tf_mod
 
 # ## SMH EDA
 #
-# Performing EDA only on the train split, i.e. the first 95% of the TS.
-# Let the holdout set be a very small percentage of the total data, we care to use as much of the TS as possible for train and validation,
-# like in the SIL project. Besides, my forecast horizon is very short, meaning that I do not need to reserve many data points.
 
 smh = data.SMHForSemiconductorSales(differencing_periods=1)
 smh.load_data(fraction=0.95, left_side=True)
@@ -75,18 +72,22 @@ sales.load_data(fraction=0.95, left_side=True)
 
 # ### Original TS
 
+sales.expected_seasonality = 48
 sales.plot_visualizations(original=True)
 
 # ### 1-Differenced TS
 
+sales.expected_seasonality = 12
 sales.plot_visualizations(diffed=True)
 
 # ### Log-transformed TS
 
+sales.expected_seasonality = 48
 sales.plot_visualizations(log=True)
 
 # ### 1-Differenced Log-transformed TS
 
+sales.expected_seasonality = 12
 sales.plot_visualizations(log_diffed=True)
 
 
