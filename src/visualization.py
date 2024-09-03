@@ -52,16 +52,16 @@ def plot_time_series_with_rolling_stats(ts: pd.Series, k: int, ts_name: str = ""
 
 def plot_ts_decomposition(
         ts: pd.Series,
-        period: int,
-        seasonality: int,
+        expected_seasonality: int,
+        seasonal_smoother_length: int = 7,
         stl: bool = True,
 ) -> plt.Figure:
     """
     Performs either STL or MA-based (additive) decomposition, based on the specified flag.
 
     :param ts: time series
-    :param period: number
-    :param seasonality: time series
+    :param expected_seasonality: period/seasonality of the ts
+    :param seasonal_smoother_length:
     :param stl: whether to go with STL or MA-based decomposition
     :return:
     """
@@ -73,18 +73,18 @@ def plot_ts_decomposition(
     if stl:
         stl = tsa_season.STL(
             ts,
-            period=period,
-            seasonal=seasonality,
+            period=expected_seasonality,
+            seasonal=7,
         )
         res = stl.fit()
         fig = res.plot()
-        fig.suptitle(f"STL decomposition - Seasonality={seasonality}")
+        fig.suptitle(f"STL decomposition - Seasonality={expected_seasonality}")
     else:
         fig = tsa_season.seasonal_decompose(
             ts, model='additive',
-            period=seasonality
+            period=seasonal_smoother_length
         ).plot()
-        fig.suptitle(f"MA-based decomposition - Seasonality={seasonality}")
+        fig.suptitle(f"MA-based decomposition - Seasonality={expected_seasonality}")
 
     fig.set_size_inches(DEFAULT_FIG_SIZE)
     return fig
@@ -216,15 +216,13 @@ def ts_eda(
     if ts_decomposition:
         _ = plot_ts_decomposition(
             ts,
-            period=expected_seasonality,
+            expected_seasonality=expected_seasonality,
             # seasonality must be odd because of STL (loess smoothing must be centered)
-            seasonality=expected_seasonality if expected_seasonality % 2 == 1 else expected_seasonality+1,
             stl=True
         )
         _ = plot_ts_decomposition(
             ts,
-            period=expected_seasonality,
-            seasonality=expected_seasonality,
+            expected_seasonality=expected_seasonality,
             stl=False
         )
 
