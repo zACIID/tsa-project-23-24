@@ -102,7 +102,7 @@ _ = diag.plot_predictions_from_fit_results(
     start_at=1
 )
 
-preds, error_df = mod.cv_forecast(
+auto_arima_cv_preds, error_df = mod.cv_forecast(
     model=auto_arima_run,  # Need to pass this because it needs get_params method - as last resort I can monkey_patch it to add the method
     ts=ts,
     start_at=train.shape[0],
@@ -112,16 +112,23 @@ preds, error_df = mod.cv_forecast(
 
 _ = diag.plot_predictions(
     train=train,
-    test=val[-(preds.shape[0]):],
-    forecast=preds,
+    test=val[-(auto_arima_cv_preds.shape[0]):],
+    forecast=auto_arima_cv_preds,
     zoom=1.0
 )
 
 _ = diag.plot_predictions(
     train=train,
-    test=val[-(preds.shape[0]):],
-    forecast=preds,
+    test=val[-(auto_arima_cv_preds.shape[0]):],
+    forecast=auto_arima_cv_preds,
     zoom=0.125
+)
+
+_ = diag.plot_predictions(
+    train=train,
+    test=val[-(auto_arima_cv_preds.shape[0]):],
+    forecast=auto_arima_cv_preds,
+    zoom=0.05
 )
 
 fit_stats_df = diag.get_diagnostics_df(auto_arima_res)
@@ -153,7 +160,7 @@ _ = diag.plot_predictions_from_fit_results(
     train=train,
     test=val,
     alpha=0.05,
-    start_at=8+1,  # seasonality+seasonal differencing
+    start_at=1,
     zoom=1.0
 )
 
@@ -162,11 +169,11 @@ _ = diag.plot_predictions_from_fit_results(
     train=train,
     test=val,
     alpha=0.05,
-    start_at=8+1,  # seasonality+seasonal differencing
+    start_at=1,
     zoom=0.125
 )
 
-preds, error_df = mod.cv_forecast(
+arima_6_1_6_cv_preds, error_df = mod.cv_forecast(
     model=arima_6_1_6,  # Need to pass this because it needs get_params method - as last resort I can monkey_patch it to add the method
     ts=ts,
     start_at=train.shape[0],
@@ -176,15 +183,22 @@ preds, error_df = mod.cv_forecast(
 
 _ = diag.plot_predictions(
     train=train,
-    test=val[-(preds.shape[0]):],
-    forecast=preds,
+    test=val[-(arima_6_1_6_cv_preds.shape[0]):],
+    forecast=arima_6_1_6_cv_preds,
     zoom=1.0
+)
+
+_ = diag.plot_predictions(
+    train=train,
+    test=val[-(arima_6_1_6_cv_preds.shape[0]):],
+    forecast=arima_6_1_6_cv_preds,
+    zoom=0.125
 )
 
 fig = diag.plot_predictions(
     train=train,
-    test=val[-(preds.shape[0]):],
-    forecast=preds,
+    test=val[-(arima_6_1_6_cv_preds.shape[0]):],
+    forecast=arima_6_1_6_cv_preds,
     zoom=0.05
 )
 _ = fig.axes[0].set_xticks(list(np.arange(fig.axes[0].get_xlim()[0], fig.axes[0].get_xlim()[1]+1)))
@@ -218,7 +232,7 @@ _ = diag.plot_predictions_from_fit_results(
     train=train,
     test=val,
     alpha=0.05,
-    start_at=8+1,  # seasonality+seasonal differencing
+    start_at=1,
     zoom=1.0
 )
 
@@ -227,11 +241,11 @@ _ = diag.plot_predictions_from_fit_results(
     train=train,
     test=val,
     alpha=0.05,
-    start_at=8+1,  # seasonality+seasonal differencing
+    start_at=1,
     zoom=0.125
 )
 
-preds, error_df = mod.cv_forecast(
+arima_8_1_8_cv_preds, error_df = mod.cv_forecast(
     model=arima_8_1_8,  # Need to pass this because it needs get_params method - as last resort I can monkey_patch it to add the method
     ts=ts,
     start_at=train.shape[0],
@@ -241,15 +255,22 @@ preds, error_df = mod.cv_forecast(
 
 _ = diag.plot_predictions(
     train=train,
-    test=val[-(preds.shape[0]):],
-    forecast=preds,
+    test=val[-(arima_8_1_8_cv_preds.shape[0]):],
+    forecast=arima_8_1_8_cv_preds,
     zoom=1.0
 )
 
 fig = diag.plot_predictions(
     train=train,
-    test=val[-(preds.shape[0]):],
-    forecast=preds,
+    test=val[-(arima_8_1_8_cv_preds.shape[0]):],
+    forecast=arima_8_1_8_cv_preds,
+    zoom=0.125
+)
+
+fig = diag.plot_predictions(
+    train=train,
+    test=val[-(arima_8_1_8_cv_preds.shape[0]):],
+    forecast=arima_8_1_8_cv_preds,
     zoom=0.05
 )
 _ = fig.axes[0].set_xticks(list(np.arange(fig.axes[0].get_xlim()[0], fig.axes[0].get_xlim()[1]+1)))
@@ -306,7 +327,7 @@ _ = diag.plot_predictions_from_fit_results(
     zoom=0.125
 )
 
-preds, error_df = mod.cv_forecast(
+ets_a_a_none_cv_preds, error_df = mod.cv_forecast(
     # Same params as above, just without the endog which does not need to be specified
     model=mod.ETSModelEstimatorWrapper(ets_a_a_none_params),
     ts=ts,
@@ -317,15 +338,22 @@ preds, error_df = mod.cv_forecast(
 
 _ = diag.plot_predictions(
     train=train,
-    test=val[-(preds.shape[0]):],
-    forecast=preds,
+    test=val[-(ets_a_a_none_cv_preds.shape[0]):],
+    forecast=ets_a_a_none_cv_preds,
     zoom=1.0
+)
+
+_ = diag.plot_predictions(
+    train=train,
+    test=val[-(ets_a_a_none_cv_preds.shape[0]):],
+    forecast=ets_a_a_none_cv_preds,
+    zoom=0.125
 )
 
 fig = diag.plot_predictions(
     train=train,
-    test=val[-(preds.shape[0]):],
-    forecast=preds,
+    test=val[-(ets_a_a_none_cv_preds.shape[0]):],
+    forecast=ets_a_a_none_cv_preds,
     zoom=0.05
 )
 _ = fig.axes[0].set_xticks(list(np.arange(fig.axes[0].get_xlim()[0], fig.axes[0].get_xlim()[1]+1)))
@@ -380,7 +408,7 @@ _ = diag.plot_predictions_from_fit_results(
     zoom=0.125
 )
 
-preds, error_df = mod.cv_forecast(
+ets_a_ad_none_preds, error_df = mod.cv_forecast(
     # Same params as above, just without the endog which does not need to be specified
     model=mod.ETSModelEstimatorWrapper(ets_a_ad_none_params),
     ts=ts,
@@ -391,15 +419,22 @@ preds, error_df = mod.cv_forecast(
 
 _ = diag.plot_predictions(
     train=train,
-    test=val[-(preds.shape[0]):],
-    forecast=preds,
+    test=val[-(ets_a_ad_none_preds.shape[0]):],
+    forecast=ets_a_ad_none_preds,
     zoom=1.0
+)
+
+_ = diag.plot_predictions(
+    train=train,
+    test=val[-(ets_a_ad_none_preds.shape[0]):],
+    forecast=ets_a_ad_none_preds,
+    zoom=0.125
 )
 
 fig = diag.plot_predictions(
     train=train,
-    test=val[-(preds.shape[0]):],
-    forecast=preds,
+    test=val[-(ets_a_ad_none_preds.shape[0]):],
+    forecast=ets_a_ad_none_preds,
     zoom=0.05
 )
 _ = fig.axes[0].set_xticks(list(np.arange(fig.axes[0].get_xlim()[0], fig.axes[0].get_xlim()[1]+1)))
@@ -444,7 +479,7 @@ _ = diag.plot_predictions_from_fit_results(
     train=train,
     test=val,
     alpha=0.05,
-    start_at=8+1,  # seasonality+seasonal differencing
+    start_at=1,
     zoom=1.0
 )
 
@@ -453,11 +488,11 @@ _ = diag.plot_predictions_from_fit_results(
     train=train,
     test=val,
     alpha=0.05,
-    start_at=8+1,  # seasonality+seasonal differencing
+    start_at=1,
     zoom=0.125
 )
 
-preds, error_df = mod.cv_forecast(
+ets_a_ad_a_cv_preds, error_df = mod.cv_forecast(
     # Same params as above, just without the endog which does not need to be specified
     model=mod.ETSModelEstimatorWrapper(ets_a_ad_a_params),
     ts=ts,
@@ -468,15 +503,22 @@ preds, error_df = mod.cv_forecast(
 
 _ = diag.plot_predictions(
     train=train,
-    test=val[-(preds.shape[0]):],
-    forecast=preds,
+    test=val[-(ets_a_ad_a_cv_preds.shape[0]):],
+    forecast=ets_a_ad_a_cv_preds,
     zoom=1.0
+)
+
+_ = diag.plot_predictions(
+    train=train,
+    test=val[-(ets_a_ad_a_cv_preds.shape[0]):],
+    forecast=ets_a_ad_a_cv_preds,
+    zoom=0.125
 )
 
 fig = diag.plot_predictions(
     train=train,
-    test=val[-(preds.shape[0]):],
-    forecast=preds,
+    test=val[-(ets_a_ad_a_cv_preds.shape[0]):],
+    forecast=ets_a_ad_a_cv_preds,
     zoom=0.05
 )
 _ = fig.axes[0].set_xticks(list(np.arange(fig.axes[0].get_xlim()[0], fig.axes[0].get_xlim()[1]+1)))
