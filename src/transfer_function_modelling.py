@@ -114,8 +114,13 @@ def prewhiten(x: pd.Series, y: pd.Series, x_differencing_order: int) -> typing.T
     y_whitened = arma_innovations(
         y,
 
-        # TODO don't understand the minus part on the AR coefficients
         # Skip the first param because it is the intercept
+        # Check the TSA course afternotes for the definition of high-pass filter
+        #   to understand why the AR polynomial here is negated. In summary:
+        #   - since we want the residuals of Y produced by the model,
+        #       we consider the model as a form of low-pass filter,
+        #       which identifies the trend basically
+        #   - to obtain a high-pass filter from a low pass you just negate each coefficient
         ar_params=-model.polynomial_reduced_ar[1:],
         ma_params=model.polynomial_reduced_ma[1:]
     )[0]
